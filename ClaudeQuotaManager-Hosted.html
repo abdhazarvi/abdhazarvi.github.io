@@ -1,0 +1,884 @@
+<!DOCTYPE html>
+<html lang="ur" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b1020">
+<title>Claude Quota Manager — کوٹا اور پروجیکٹ ٹریکر</title>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<style>
+:root{
+  --bg:#0b1020; --bg2:#111830; --card:#151d38; --card2:#1a2447; --line:#26325e;
+  --txt:#eef1ff; --muted:#9aa6cf; --accent:#e07856; --accent2:#7c6cf0;
+  --green:#2ecc8f; --amber:#ffb547; --red:#ff6b7a; --blue:#4da3ff;
+  --radius:18px; --shadow:0 10px 30px rgba(0,0,0,.35);
+}
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
+html{scroll-behavior:smooth}
+body{margin:0; font-family:"Segoe UI", Tahoma, system-ui, sans-serif; background:radial-gradient(900px 500px at 85% -10%, rgba(124,108,240,.20), transparent 60%), radial-gradient(700px 420px at 0% 0%, rgba(224,120,86,.14), transparent 55%), var(--bg); color:var(--txt); min-height:100vh; padding-bottom:96px}
+button{font-family:inherit; cursor:pointer; border:none}
+input,textarea,select{font-family:inherit; width:100%; background:var(--bg2); border:1px solid var(--line); color:var(--txt); border-radius:12px; padding:12px 14px; font-size:15px; outline:none}
+input:focus,textarea:focus,select:focus{border-color:var(--accent2); box-shadow:0 0 0 3px rgba(124,108,240,.18)}
+label{font-size:13px; color:var(--muted); display:block; margin:12px 0 6px}
+a{color:var(--blue)}
+.wrap{max-width:860px; margin:0 auto; padding:16px 14px 0}
+header.top{display:flex; align-items:center; gap:12px; padding:8px 2px 4px}
+.logo{width:48px; height:48px; border-radius:14px; background:linear-gradient(135deg, var(--accent), var(--accent2)); display:flex; align-items:center; justify-content:center; font-size:24px; box-shadow:var(--shadow); flex:none}
+header.top h1{font-size:20px; margin:0; line-height:1.25}
+header.top p{margin:2px 0 0; color:var(--muted); font-size:12.5px}
+.storage-pill{margin-inline-start:auto; font-size:11.5px; color:var(--muted); background:var(--card); border:1px solid var(--line); padding:7px 10px; border-radius:999px; white-space:nowrap}
+.storage-pill b{color:var(--green)}
+.stats{display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin:16px 0 6px}
+.stat{background:linear-gradient(160deg, var(--card2), var(--card)); border:1px solid var(--line); border-radius:var(--radius); padding:14px 10px; text-align:center; box-shadow:var(--shadow)}
+.stat .num{font-size:24px; font-weight:800; line-height:1}
+.stat .lbl{font-size:11.5px; color:var(--muted); margin-top:6px}
+.stat.ready .num{color:var(--green)} .stat.wait .num{color:var(--amber)}
+h2.sec{font-size:16.5px; margin:22px 2px 10px; display:flex; align-items:center; gap:8px}
+h2.sec .dot{width:9px; height:9px; border-radius:50%; background:var(--green); box-shadow:0 0 0 0 rgba(46,204,143,.6); animation:pulse 1.6s infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(46,204,143,.55)}70%{box-shadow:0 0 0 9px rgba(46,204,143,0)}100%{box-shadow:0 0 0 0 rgba(46,204,143,0)}}
+.card{background:linear-gradient(165deg, var(--card2), var(--card)); border:1px solid var(--line); border-radius:var(--radius); padding:16px; margin-bottom:12px; box-shadow:var(--shadow); position:relative; overflow:hidden}
+.card::before{content:""; position:absolute; inset-inline-start:0; top:0; bottom:0; width:5px; background:var(--ac, var(--accent2))}
+.card.ready{border-color:rgba(46,204,143,.55)}
+.card h3{margin:0 0 4px; font-size:16.5px; padding-inline-start:6px}
+.meta{color:var(--muted); font-size:12.5px; padding-inline-start:6px; display:flex; flex-wrap:wrap; gap:6px 12px}
+.acct-block{padding-inline-start:6px; margin:2px 0 4px}
+.acct-block .aname{font-size:14px; font-weight:700; color:var(--txt)}
+.gmail-line{direction:ltr; unicode-bidi:embed; text-align:right; font-size:13px; color:var(--blue); margin-top:2px; white-space:nowrap; word-break:normal; overflow:visible; letter-spacing:0}
+.gmail-line.none{color:var(--muted); direction:rtl; font-size:12px; white-space:normal}
+.acct-email{direction:ltr; unicode-bidi:embed; text-align:left; background:var(--bg2); border:1px solid var(--line); border-radius:10px; padding:9px 12px; margin-top:11px; font-size:13.5px; color:var(--blue); white-space:nowrap; overflow:hidden; letter-spacing:0}
+.badge{display:inline-flex; align-items:center; gap:5px; font-size:11.5px; font-weight:700; padding:4px 9px; border-radius:999px; background:var(--bg2); border:1px solid var(--line)}
+.badge.ready{color:var(--green); border-color:rgba(46,204,143,.5)}
+.badge.waiting{color:var(--amber)} .badge.active{color:var(--blue)} .badge.done{color:var(--muted)} .badge.paused{color:var(--red)}
+.countdown{font-size:21px; font-weight:800; margin:10px 6px 2px; direction:ltr; unicode-bidi:embed; text-align:end}
+.countdown small{display:block; direction:rtl; font-size:12px; font-weight:400; color:var(--muted); margin-top:2px}
+.progress{height:9px; background:var(--bg2); border-radius:99px; overflow:hidden; margin:12px 6px 4px; border:1px solid var(--line)}
+.progress i{display:block; height:100%; background:linear-gradient(90deg, var(--accent2), var(--accent)); border-radius:99px; transition:width .4s}
+.phase{font-size:12.5px; color:var(--muted); padding-inline-start:6px}
+.actions{display:flex; flex-wrap:wrap; gap:8px; margin-top:13px; padding-inline-start:6px}
+.btn{background:var(--bg2); color:var(--txt); border:1px solid var(--line); border-radius:12px; padding:10px 13px; font-size:13.5px; font-weight:600; display:inline-flex; align-items:center; gap:6px; text-decoration:none}
+.btn.primary{background:linear-gradient(135deg, var(--accent), #c85a38); border-color:transparent; color:#fff}
+.btn.green{background:linear-gradient(135deg, #1fae76, #178a5e); border-color:transparent; color:#fff}
+.btn.amber{background:linear-gradient(135deg, #d99a26, #b97c14); border-color:transparent; color:#fff}
+.btn:active{transform:scale(.97)}
+.btn.small{padding:7px 10px; font-size:12.5px; border-radius:10px}
+.btn.danger{color:var(--red)}
+.btn[disabled]{opacity:.45; cursor:not-allowed}
+.acct{display:flex; align-items:center; gap:12px}
+.avatar{width:44px; height:44px; border-radius:50%; flex:none; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:17px; color:#fff}
+.acct .info{flex:1; min-width:0}
+.acct .info b{font-size:15.5px; display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.acct .info span{color:var(--muted); font-size:12.5px}
+.empty{background:var(--card); border:1.5px dashed var(--line); border-radius:var(--radius); padding:26px 18px; text-align:center; color:var(--muted); font-size:14px; line-height:1.9}
+.empty b{color:var(--txt); font-size:16px}
+.log-item{display:flex; gap:10px; padding:10px 6px; border-bottom:1px solid var(--line); font-size:13.5px}
+.log-item:last-child{border-bottom:none}
+.log-item time{color:var(--muted); font-size:11.5px; white-space:nowrap; padding-top:2px}
+.view{display:none} .view.on{display:block}
+nav.bottom{position:fixed; bottom:0; left:0; right:0; background:rgba(13,18,38,.92); backdrop-filter:blur(14px); border-top:1px solid var(--line); display:flex; justify-content:space-around; padding:8px 4px calc(8px + env(safe-area-inset-bottom)); z-index:50}
+nav.bottom button{background:none; color:var(--muted); font-size:11px; display:flex; flex-direction:column; align-items:center; gap:3px; padding:4px 8px; border-radius:10px}
+nav.bottom button .ic{font-size:20px}
+nav.bottom button.on{color:var(--accent)}
+nav.bottom button.addb .ic{background:linear-gradient(135deg, var(--accent), var(--accent2)); color:#fff; width:42px; height:42px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:24px; margin-top:-18px; box-shadow:var(--shadow); border:3px solid var(--bg)}
+.modal-bg{position:fixed; inset:0; background:rgba(3,5,14,.7); backdrop-filter:blur(4px); z-index:100; display:none; align-items:flex-end; justify-content:center}
+.modal-bg.on{display:flex}
+.modal{background:var(--card); width:100%; max-width:560px; max-height:88vh; overflow:auto; border-radius:22px 22px 0 0; border:1px solid var(--line); padding:20px 18px 28px; animation:up .25s ease}
+@keyframes up{from{transform:translateY(30px); opacity:.5}to{transform:none; opacity:1}}
+.modal h3{margin:0 0 4px; font-size:17px}
+.modal .sub{color:var(--muted); font-size:13px; margin-bottom:6px}
+.chips{display:flex; flex-wrap:wrap; gap:8px; margin-top:8px}
+.chip{background:var(--bg2); border:1px solid var(--line); color:var(--txt); border-radius:999px; padding:9px 13px; font-size:13px; font-weight:600}
+.chip.sel{border-color:var(--accent); background:rgba(224,120,86,.16); color:var(--accent)}
+.color-row{display:flex; gap:9px; margin-top:8px}
+.color-dot{width:34px; height:34px; border-radius:50%; border:3px solid transparent; cursor:pointer}
+.color-dot.sel{border-color:#fff}
+.toast{position:fixed; bottom:100px; left:50%; transform:translateX(-50%) translateY(20px); background:#202b52; border:1px solid var(--line); color:var(--txt); padding:12px 18px; border-radius:14px; font-size:14px; z-index:200; opacity:0; pointer-events:none; transition:.3s; box-shadow:var(--shadow); max-width:88vw; text-align:center}
+.toast.on{opacity:1; transform:translateX(-50%)}
+.searchbar{display:flex; gap:8px; margin:4px 0 12px}
+.note{font-size:12.5px; color:var(--muted); line-height:1.9}
+.kv{display:flex; justify-content:space-between; gap:10px; padding:9px 2px; border-bottom:1px solid var(--line); font-size:13.5px}
+.kv:last-child{border:none} .kv span{color:var(--muted)}
+@media (min-width:640px){ .stats{grid-template-columns:repeat(4,1fr)} .modal-bg{align-items:center} .modal{border-radius:22px} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="logo">⏳</div>
+    <div>
+      <h1>Claude Quota Manager</h1>
+      <p>کون سا اکاؤنٹ کب فری ہوگا — سب ایک نظر میں</p>
+    </div>
+    <div class="storage-pill" id="storagePill">💾 Local: <b>آن</b></div>
+  </header>
+
+  <!-- DASHBOARD -->
+  <section class="view on" id="view-dash">
+    <div class="stats">
+      <div class="stat"><div class="num" id="stAccounts">0</div><div class="lbl">کل اکاؤنٹس</div></div>
+      <div class="stat ready"><div class="num" id="stReady">0</div><div class="lbl">ابھی Ready</div></div>
+      <div class="stat wait"><div class="num" id="stWaiting">0</div><div class="lbl">انتظار میں</div></div>
+      <div class="stat"><div class="num" id="stDone">0</div><div class="lbl">مکمل پروجیکٹس</div></div>
+    </div>
+
+    <h2 class="sec"><span class="dot"></span> ابھی Continue کرو</h2>
+    <div id="readyList"></div>
+
+    <h2 class="sec">⏳ اگلا ری سیٹ سب سے پہلے</h2>
+    <div id="nextList"></div>
+
+    <h2 class="sec">🚀 چلتے ہوئے پروجیکٹس</h2>
+    <div id="activeList"></div>
+  </section>
+
+  <!-- PROJECTS -->
+  <section class="view" id="view-projects">
+    <h2 class="sec">📁 تمام پروجیکٹس</h2>
+    <div class="searchbar"><input id="searchInput" type="search" placeholder="پروجیکٹ یا اکاؤنٹ تلاش کرو…"></div>
+    <div id="allProjects"></div>
+  </section>
+
+  <!-- ACCOUNTS -->
+  <section class="view" id="view-accounts">
+    <h2 class="sec">👤 Claude اکاؤنٹس</h2>
+    <div class="card" style="--ac:var(--blue)">
+      <h3>📱 ڈیوائس کے Google اکاؤنٹس</h3>
+      <p class="note">سچ یہ ہے کہ کوئی بھی HTML فائل یا ویب پیج تمہارے فون میں محفوظ Google اکاؤنٹس خود پڑھ نہیں سکتا — Android اور براؤزر سیکیورٹی اسے روکتی ہے، ورنہ ہر ویب سائٹ تمہاری ساری ای میلز دیکھ لیتی۔ اس کے بدلے تیز ترین عملی طریقہ یہ دیا ہے: ساری Gmail آئی ڈیز ایک ساتھ لکھو/پیسٹ کرو، ایک کلک میں سب اکاؤنٹس بن جائیں گے — بالکل ویسے ہی جیسے ایک ایک کر کے بنتے ہیں۔</p>
+      <div class="actions">
+        <button class="btn primary" onclick="openBulkAddModal()">⚡ سارے اکاؤنٹس ایک ساتھ شامل کرو</button>
+        <button class="btn" onclick="openDeviceInfoModal()">❓ خودکار ڈیٹیکشن کیوں نہیں ہو سکتی؟</button>
+      </div>
+    </div>
+    <div id="accountList"></div>
+    <button class="btn primary" style="width:100%; justify-content:center; padding:14px" onclick="openAccountModal()">＋ نیا اکاؤنٹ شامل کرو</button>
+    <p class="note" style="margin-top:10px">نوٹ: یہاں صرف اکاؤنٹ کا نام/ای میل کا اشارہ رکھو — پاس ورڈ کبھی مت لکھو۔ ہر اکاؤنٹ پر ایک وقت میں ایک ایکٹو پروجیکٹ کا اصول ٹول خود برقرار رکھتا ہے۔</p>
+  </section>
+
+  <!-- HISTORY -->
+  <section class="view" id="view-history">
+    <h2 class="sec">🕘 ہسٹری</h2>
+    <div class="card" style="--ac:var(--blue)"><div id="logList"></div></div>
+  </section>
+
+  <!-- BACKUP / SETTINGS -->
+  <section class="view" id="view-backup">
+    <h2 class="sec">💾 ڈیٹا اور بیک اپ</h2>
+
+    <div class="card" style="--ac:var(--green)">
+      <h3>🖥️ منتخب فولڈر میں آٹو سیو (کمپیوٹر)</h3>
+      <p class="note">Chrome یا Edge میں اپنا فولڈر منتخب کرو — ٹول وہاں <span dir="ltr">ClaudeManagerData.json</span> فائل میں ہر تبدیلی خود سیو کرے گا۔ موبائل (Android) پر براؤزر کی یہ سہولت مکمل نہیں، وہاں نیچے والا Export/Import استعمال ہوگا۔</p>
+      <div class="actions">
+        <button class="btn green" onclick="chooseFolder()">📂 فولڈر منتخب کرو</button>
+        <button class="btn" id="folderLoadBtn" onclick="loadFromFolder()" disabled>📥 فولڈر سے لوڈ کرو</button>
+      </div>
+      <div class="kv"><span>فولڈر اسٹیٹس</span><b id="folderStatus">منسلک نہیں</b></div>
+    </div>
+
+    <div class="card" style="--ac:var(--accent2)">
+      <h3>📤 Export / Import (موبائل کے لیے)</h3>
+      <p class="note">Export سے پوری ڈیٹا فائل ڈاؤن لوڈ ہوگی — اسے Google Drive یا WhatsApp میں اپنے پاس محفوظ رکھ لو۔ نئے فون/براؤزر میں Import سے سب واپس آ جائے گا۔</p>
+      <div class="actions">
+        <button class="btn primary" onclick="exportData()">⬇️ Export ڈیٹا</button>
+        <button class="btn" onclick="document.getElementById('importFile').click()">⬆️ Import ڈیٹا</button>
+        <input type="file" id="importFile" accept=".json,application/json" hidden>
+      </div>
+    </div>
+
+    <div class="card" style="--ac:var(--amber)">
+      <h3>🗂️ خودکار بیک اپس</h3>
+      <p class="note">Import یا ڈیٹا صاف کرنے سے پہلے ٹول خود بیک اپ بنا لیتا ہے (آخری 10 محفوظ رہتے ہیں)۔</p>
+      <div class="actions"><button class="btn amber" onclick="manualSnapshot()">ابھی بیک اپ بناؤ</button></div>
+      <div id="snapshotList" style="margin-top:8px"></div>
+    </div>
+
+    <div class="card" style="--ac:var(--blue)">
+      <h3>☁️ Google اکاؤنٹ — Sign in with Google</h3>
+      <p class="note">جیسے باقی ایپس میں ہوتا ہے: بٹن دباؤ، Google اکاؤنٹ چنو، Continue — بس۔ ڈیٹا اسی اکاؤنٹ کی Google Drive کے خفیہ فولڈر میں محفوظ ہوگا، ہر ڈیوائس پر وہی اکاؤنٹ سائن اِن کرتے ہی ڈیٹا آ جائے گا۔ نہ Apps Script، نہ لمبا لنک۔</p>
+      <div id="googleAccountBox" style="margin-top:10px"></div>
+      <div class="kv" style="margin-top:8px"><span>Sync اسٹیٹس</span><b id="googleSyncStatus">منسلک نہیں</b></div>
+      <p class="note">شرط صرف یہ ہے کہ یہ پیج اپنے <b>HTTPS لنک</b> سے کھلا ہو — ڈاؤن لوڈ فولڈر کی فائل پر Google Sign-In خود نہیں دیتا۔</p>
+    </div>
+
+    <div class="card" style="--ac:var(--red)">
+      <h3>⚙️ دیگر</h3>
+      <div class="actions">
+        <button class="btn" onclick="toggleNotify()">🔔 نوٹیفکیشن: <span id="notifyState">آن</span></button>
+        <button class="btn" onclick="loadDemo()">🧪 ڈیمو ڈیٹا دیکھو</button>
+        <button class="btn danger" onclick="clearAll()">🗑️ سارا ڈیٹا صاف کرو</button>
+      </div>
+      <p class="note">نوٹیفکیشن صرف تب آئے گا جب یہ فائل براؤزر میں کھلی ہو۔ یقینی یاد دہانی کے لیے پروجیکٹ کارڈ پر 📅 بٹن سے فون کیلنڈر میں الارم لگا لو — وہ ہر حال میں بجے گا۔</p>
+    </div>
+  </section>
+</div>
+
+<nav class="bottom">
+  <button class="on" data-view="dash" onclick="showView('dash',this)"><span class="ic">🏠</span>ڈیش بورڈ</button>
+  <button data-view="projects" onclick="showView('projects',this)"><span class="ic">📁</span>پروجیکٹس</button>
+  <button class="addb" onclick="openProjectModal()"><span class="ic">＋</span>نیا</button>
+  <button data-view="accounts" onclick="showView('accounts',this)"><span class="ic">👤</span>اکاؤنٹس</button>
+  <button data-view="backup" onclick="showView('backup',this)"><span class="ic">💾</span>بیک اپ</button>
+</nav>
+
+<div class="modal-bg" id="modalBg"><div class="modal" id="modalBox"></div></div>
+<div class="toast" id="toast"></div>
+
+<script type="text/plain" id="gasCode">
+const FILE_NAME = 'ClaudeManagerData.json';
+function getFile_() {
+  const it = DriveApp.getFilesByName(FILE_NAME);
+  return it.hasNext() ? it.next() : null;
+}
+function doGet(e) {
+  const p = (e && e.parameter) || {};
+  const cb = p.callback || '';
+  const action = p.action || 'load';
+  let out;
+  try {
+    if (action === 'ping') {
+      const f = getFile_();
+      out = { ok: true, hasData: !!f, updatedAt: f ? f.getLastUpdated().toISOString() : null };
+    } else {
+      const f = getFile_();
+      out = { ok: true, data: f ? JSON.parse(f.getContentText()) : null };
+    }
+  } catch (err) { out = { ok: false, error: String(err) }; }
+  const body = cb ? cb + '(' + JSON.stringify(out) + ');' : JSON.stringify(out);
+  return ContentService.createTextOutput(body)
+    .setMimeType(cb ? ContentService.MimeType.JAVASCRIPT : ContentService.MimeType.JSON);
+}
+function doPost(e) {
+  try {
+    const parsed = JSON.parse(e.postData.contents);
+    if (parsed.action === 'save' && parsed.data) {
+      const text = JSON.stringify(parsed.data);
+      const f = getFile_();
+      if (f) { f.setContent(text); } else { DriveApp.createFile(FILE_NAME, text, MimeType.PLAIN_TEXT); }
+      return ContentService.createTextOutput('OK');
+    }
+    return ContentService.createTextOutput('BAD REQUEST');
+  } catch (err) { return ContentService.createTextOutput('ERR: ' + err); }
+}
+</script>
+<script>
+"use strict";
+/* ============ Claude Quota Manager — Hybrid Storage Architecture ============
+   Storage adapters (ایک ہی انٹرفیس، V1.1 میں Google adapter یہیں جُڑے گا):
+   1) LocalAdapter  : localStorage — ہمیشہ آن، موبائل سمیت
+   2) FolderAdapter : File System Access API — منتخب فولڈر میں JSON فائل
+   3) GoogleAdapter : (placeholder) Drive/Sheet — V1.1
+============================================================================ */
+const LS_KEY = "cqm_data_v1", SNAP_KEY = "cqm_snapshots_v1";
+const COLORS = ["#e07856","#7c6cf0","#2ecc8f","#4da3ff","#ffb547","#ff6b7a","#38c6d9","#b07fe8"];
+/* مالک کے اکاؤنٹس — اس ورژن میں پہلے سے شامل (صرف تب استعمال ہوتے ہیں جب محفوظ شدہ ڈیٹا بالکل نہ ہو، یعنی پہلی بار کھولنے پر) */
+const OWNER_SEED = [];
+function seedState(){
+  const ts = Date.now();
+  return { version:1, updatedAt:ts,
+    accounts: OWNER_SEED.map((a,i)=>({id:"seed"+(i+1)+"_"+ts.toString(36), name:a[0], emailHint:a[1], color:a[2], createdAt:ts})),
+    projects:[],
+    logs:[{id:"seedlog_"+ts.toString(36), ts:ts, projectId:null, text:"خوش آمدید! پہلے Google سے سائن اِن کرو — اگر پہلے کا ڈیٹا Google میں ہے تو خود آ جائے گا، نہیں تو اکاؤنٹس شامل کر کے Sync کر دو، پھر ہمیشہ Google میں رہے گا۔"}],
+    settings:{notify:true} };
+}
+let state = loadLocal() || seedState();
+state.settings = Object.assign({notify:true, googleSyncUrl:"", googleClientId:"", autoSync:true, lastSyncAt:null, lastSyncStatus:"", googleAccountEmail:"", googleAccountName:""}, state.settings || {});
+if(!Array.isArray(state.logs)) state.logs = [];
+let dirHandle = null, fileHandle = null, folderReady = false;
+let editingAccountId = null, editingProjectId = null, quotaProjectId = null, quotaChoice = null;
+let pickedColor = COLORS[0];
+
+function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+function now(){ return Date.now(); }
+function esc(s){ return String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+function toast(msg){ const t=document.getElementById("toast"); t.textContent=msg; t.classList.add("on"); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove("on"),2600); }
+function fmtDate(ts){ if(!ts) return "—"; const d=new Date(ts); return d.toLocaleDateString("ur-PK") + " " + d.toLocaleTimeString("ur-PK",{hour:"2-digit",minute:"2-digit"}); }
+
+/* ---------- Local adapter ---------- */
+function loadLocal(){ try{ const r=localStorage.getItem(LS_KEY); return r?JSON.parse(r):null; }catch(e){ return null; } }
+function saveLocal(){ state.updatedAt=now(); try{ localStorage.setItem(LS_KEY, JSON.stringify(state)); }catch(e){} }
+
+/* ---------- Folder adapter (File System Access API + IndexedDB handle) ---------- */
+function idb(){ return new Promise((res,rej)=>{ const r=indexedDB.open("cqm-db",1); r.onupgradeneeded=()=>r.result.createObjectStore("handles"); r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); }); }
+async function idbSet(k,v){ const db=await idb(); return new Promise((res,rej)=>{ const tx=db.transaction("handles","readwrite"); tx.objectStore("handles").put(v,k); tx.oncomplete=res; tx.onerror=()=>rej(tx.error); }); }
+async function idbGet(k){ const db=await idb(); return new Promise((res,rej)=>{ const rq=db.transaction("handles").objectStore("handles").get(k); rq.onsuccess=()=>res(rq.result); rq.onerror=()=>rej(rq.error); }); }
+async function folderWrite(){
+  if(!folderReady || !fileHandle) return;
+  try{ const w=await fileHandle.createWritable(); await w.write(JSON.stringify(state,null,2)); await w.close(); }
+  catch(e){ folderReady=false; updateFolderUI(); }
+}
+let _fwT=null; function folderWriteSoon(){ clearTimeout(_fwT); _fwT=setTimeout(folderWrite,600); }
+async function chooseFolder(){
+  if(!window.showDirectoryPicker){ toast("اس براؤزر میں فولڈر کی سہولت نہیں — Export/Import استعمال کرو"); return; }
+  try{
+    dirHandle = await window.showDirectoryPicker({mode:"readwrite"});
+    fileHandle = await dirHandle.getFileHandle("ClaudeManagerData.json",{create:true});
+    await idbSet("dir", dirHandle);
+    folderReady = true; updateFolderUI();
+    const f = await fileHandle.getFile();
+    if(f.size>10){
+      if(confirm("اس فولڈر کی فائل میں پہلے سے ڈیٹا موجود ہے۔ وہ لوڈ کروں؟ (نہیں = موجودہ ڈیٹا اس فائل میں سیو ہو جائے گا)")){
+        const parsed = JSON.parse(await f.text());
+        if(parsed && Array.isArray(parsed.accounts)){ makeSnapshot("فولڈر لوڈ سے پہلے"); state=parsed; saveLocal(); render(); toast("فولڈر سے ڈیٹا لوڈ ہو گیا ✅"); return; }
+      }
+    }
+    await folderWrite(); toast("فولڈر منسلک ہو گیا — اب ہر تبدیلی خود سیو ہوگی ✅");
+  }catch(e){ if(e.name!=="AbortError") toast("فولڈر منسلک نہیں ہو سکا"); }
+}
+async function loadFromFolder(){
+  if(!fileHandle){ toast("پہلے فولڈر منتخب کرو"); return; }
+  try{ const f=await fileHandle.getFile(); if(f.size<10){ toast("فائل خالی ہے"); return; }
+    const parsed=JSON.parse(await f.text());
+    if(parsed && Array.isArray(parsed.accounts)){ makeSnapshot("فولڈر لوڈ سے پہلے"); state=parsed; saveLocal(); render(); toast("فولڈر سے تازہ ڈیٹا آ گیا ✅"); }
+  }catch(e){ toast("فائل پڑھی نہیں جا سکی"); }
+}
+async function restoreFolder(){
+  if(!window.showDirectoryPicker) return;
+  try{ const h=await idbGet("dir"); if(!h) return; dirHandle=h;
+    const perm = await h.queryPermission({mode:"readwrite"});
+    if(perm==="granted"){ fileHandle=await h.getFileHandle("ClaudeManagerData.json",{create:true}); folderReady=true; }
+    updateFolderUI(perm);
+  }catch(e){}
+}
+function updateFolderUI(perm){
+  const el=document.getElementById("folderStatus"), lb=document.getElementById("folderLoadBtn");
+  if(folderReady){ el.textContent="منسلک ✅ (آٹو سیو آن)"; el.style.color="var(--green)"; lb.disabled=false;
+    document.getElementById("storagePill").innerHTML="💾 Local + Folder: <b>آن</b>"; }
+  else if(dirHandle){ el.textContent="فولڈر یاد ہے — اجازت کے لیے دوبارہ منتخب کرو"; }
+  else { el.textContent="منسلک نہیں"; }
+}
+
+/* ---------- Snapshots ---------- */
+function getSnapshots(){ try{ return JSON.parse(localStorage.getItem(SNAP_KEY)||"[]"); }catch(e){ return []; } }
+function makeSnapshot(label){
+  const snaps=getSnapshots(); snaps.unshift({ts:now(), label:label||"بیک اپ", data:JSON.stringify(state)});
+  while(snaps.length>10) snaps.pop();
+  try{ localStorage.setItem(SNAP_KEY, JSON.stringify(snaps)); }catch(e){}
+  renderSnapshots();
+}
+function manualSnapshot(){ makeSnapshot("دستی بیک اپ"); toast("بیک اپ بن گیا ✅"); }
+function restoreSnapshot(i){
+  const s=getSnapshots()[i]; if(!s) return;
+  if(!confirm("یہ بیک اپ بحال کروں؟ موجودہ ڈیٹا پہلے خود بیک اپ ہو جائے گا۔")) return;
+  makeSnapshot("بحالی سے پہلے آٹو بیک اپ");
+  try{ state=JSON.parse(s.data); save(); render(); toast("بیک اپ بحال ہو گیا ✅"); }catch(e){ toast("بیک اپ خراب ہے"); }
+}
+function renderSnapshots(){
+  const box=document.getElementById("snapshotList"); const snaps=getSnapshots();
+  box.innerHTML = snaps.length ? snaps.map((s,i)=>`<div class="kv"><span>${esc(fmtDate(s.ts))} — ${esc(s.label)}</span><button class="btn small" onclick="restoreSnapshot(${i})">بحال کرو</button></div>`).join("") : `<p class="note">ابھی کوئی بیک اپ نہیں۔</p>`;
+}
+
+/* ---------- Core save (Local + Folder + Google auto-sync) ---------- */
+function save(){
+  saveLocal(); folderWriteSoon();
+  if(typeof scheduleGoogleAutoSync==="function") scheduleGoogleAutoSync();
+}
+function log(text, projectId){
+  state.logs.unshift({id:uid(), ts:now(), text, projectId:projectId||null});
+  if(state.logs.length>200) state.logs.length=200;
+}
+
+/* ---------- Derived status ---------- */
+function pStatus(p){
+  if(p.status==="done") return "done";
+  if(p.status==="paused") return "paused";
+  if(p.status==="waiting" && p.resetAt && p.resetAt<=now()) return "ready";
+  if(p.status==="waiting") return "waiting";
+  return "active";
+}
+function accountOf(p){ return state.accounts.find(a=>a.id===p.accountId); }
+function fmtCountdown(ms){
+  if(ms<=0) return "00:00:00";
+  const s=Math.floor(ms/1000), d=Math.floor(s/86400), h=Math.floor(s%86400/3600), m=Math.floor(s%3600/60), ss=s%60;
+  const pad=n=>String(n).padStart(2,"0");
+  return (d>0? d+"d ":"") + pad(h)+":"+pad(m)+":"+pad(ss);
+}
+
+/* ---------- Render ---------- */
+function badge(st){
+  return {ready:'<span class="badge ready">🟢 READY</span>', waiting:'<span class="badge waiting">⏳ انتظار</span>',
+    active:'<span class="badge active">🚀 چل رہا ہے</span>', done:'<span class="badge done">✅ مکمل</span>',
+    paused:'<span class="badge paused">⏸️ رکا ہوا</span>'}[st];
+}
+function projectCard(p){
+  const st=pStatus(p), a=accountOf(p), color=a?a.color:"#7c6cf0";
+  const cd = st==="waiting" ? `<div class="countdown" data-countdown="${p.resetAt}">${fmtCountdown(p.resetAt-now())}<small>بعد کوٹا ری سیٹ ہوگا — ${esc(fmtDate(p.resetAt))}</small></div>`
+    : st==="ready" ? `<div class="countdown" style="color:var(--green)">READY ✔<small>کوٹا ری سیٹ ہو چکا — ابھی Continue کرو</small></div>` : "";
+  return `<div class="card ${st==="ready"?"ready":""}" style="--ac:${color}">
+    <h3>${esc(p.title)}</h3>
+    <div class="acct-block"><div class="aname">👤 ${esc(a?a.name:"؟")}</div>${a&&a.emailHint?`<div class="gmail-line">✉️ ${esc(a.emailHint)}</div>`:`<div class="gmail-line none">Gmail شامل نہیں — اکاؤنٹ میں ترمیم کر کے شامل کرو</div>`}</div>
+    <div class="meta">${badge(st)}${p.phase?`<span>📌 ${esc(p.phase)}</span>`:""}<span>آخری اپڈیٹ: ${esc(fmtDate(p.updatedAt))}</span></div>
+    ${cd}
+    <div class="progress"><i style="width:${Math.min(100,Math.max(0,p.progress||0))}%"></i></div>
+    <div class="phase">پروگریس: ${p.progress||0}%</div>
+    <div class="actions">
+      ${p.link?`<a class="btn primary" href="${esc(p.link)}" target="_blank" rel="noopener">💬 Claude کھولو</a>`:""}
+      ${p.nextPrompt?`<button class="btn green" onclick="copyPrompt('${p.id}')">📋 Continue Prompt کاپی</button>`:""}
+      ${st==="active"?`<button class="btn amber" onclick="openQuotaModal('${p.id}')">⛔ کوٹا ختم ہو گیا</button>`:""}
+      ${st==="ready"||st==="waiting"?`<button class="btn green" onclick="markContinued('${p.id}')">▶️ Continue کر دیا</button>`:""}
+      ${st==="waiting"||st==="ready"?`<button class="btn" onclick="downloadICS('${p.id}')">📅 الارم/کیلنڈر</button>`:""}
+      ${st!=="done"?`<button class="btn" onclick="markDone('${p.id}')">✅ مکمل</button>`:""}
+      <button class="btn small" onclick="openProjectModal('${p.id}')">✏️ ترمیم</button>
+      ${st==="active"?`<button class="btn small" onclick="togglePause('${p.id}')">⏸️ روکو</button>`:""}
+      ${st==="paused"?`<button class="btn small" onclick="togglePause('${p.id}')">▶️ شروع</button>`:""}
+      <button class="btn small danger" onclick="deleteProject('${p.id}')">🗑️</button>
+    </div></div>`;
+}
+function render(){
+  const ps=[...state.projects];
+  const ready=ps.filter(p=>pStatus(p)==="ready");
+  const waiting=ps.filter(p=>pStatus(p)==="waiting").sort((x,y)=>x.resetAt-y.resetAt);
+  const active=ps.filter(p=>pStatus(p)==="active");
+  document.getElementById("stAccounts").textContent=state.accounts.length;
+  document.getElementById("stReady").textContent=ready.length;
+  document.getElementById("stWaiting").textContent=waiting.length;
+  document.getElementById("stDone").textContent=ps.filter(p=>pStatus(p)==="done").length;
+  const emptyMsg = state.accounts.length===0
+    ? `<div class="empty"><b>شروع کریں 👇</b><br>پہلے ایک Claude اکاؤنٹ شامل کرو، پھر اس کا پروجیکٹ۔<br><br><button class="btn primary" onclick="openAccountModal()">＋ پہلا اکاؤنٹ شامل کرو</button> &nbsp;<button class="btn" onclick="loadDemo()">🧪 ڈیمو دیکھو</button></div>`
+    : `<div class="empty">اس وقت کوئی نہیں — اچھی بات ہے، یا کوٹا ختم ہونے پر پروجیکٹ کو مارک کرو۔</div>`;
+  document.getElementById("readyList").innerHTML = ready.length? ready.map(projectCard).join("") : emptyMsg;
+  document.getElementById("nextList").innerHTML = waiting.length? waiting.slice(0,3).map(projectCard).join("") : `<div class="empty">کوئی پروجیکٹ انتظار میں نہیں۔</div>`;
+  document.getElementById("activeList").innerHTML = active.length? active.map(projectCard).join("") : `<div class="empty">کوئی پروجیکٹ چل نہیں رہا۔ ＋ نیا سے شامل کرو۔</div>`;
+  const q=(document.getElementById("searchInput").value||"").trim().toLowerCase();
+  const filtered=ps.filter(p=>!q || p.title.toLowerCase().includes(q) || (accountOf(p)&&(accountOf(p).name.toLowerCase().includes(q)||(accountOf(p).emailHint||"").toLowerCase().includes(q))))
+    .sort((x,y)=>({"ready":0,"waiting":1,"active":2,"paused":3,"done":4}[pStatus(x)]-{"ready":0,"waiting":1,"active":2,"paused":3,"done":4}[pStatus(y)]) || (y.updatedAt-x.updatedAt));
+  document.getElementById("allProjects").innerHTML = filtered.length? filtered.map(projectCard).join("") : `<div class="empty">کوئی پروجیکٹ نہیں ملا۔</div>`;
+  document.getElementById("accountList").innerHTML = state.accounts.length? state.accounts.map(a=>{
+    const mine=ps.filter(p=>p.accountId===a.id), act=mine.find(p=>["active","waiting","ready"].includes(pStatus(p)));
+    const stUrdu = {"ready":"READY ہے","waiting":"انتظار میں","active":"چل رہا ہے","done":"مکمل","paused":"رکا ہوا"};
+    return `<div class="card" style="--ac:${a.color}"><div class="acct">
+      <div class="avatar" style="background:${a.color}">${esc((a.name||"C").trim().charAt(0).toUpperCase())}</div>
+      <div class="info"><b>${esc(a.name)}</b><span dir="auto" style="unicode-bidi:embed">${act? esc(act.title)+" — "+stUrdu[pStatus(act)] : "کوئی ایکٹو پروجیکٹ نہیں"}</span>${a.emailHint?"":'<span style="color:var(--red)">Gmail شامل نہیں</span>'}</div>
+      <button class="btn small" onclick="openAccountModal('${a.id}')">✏️</button>
+      <button class="btn small danger" onclick="deleteAccount('${a.id}')">🗑️</button>
+    </div>${a.emailHint?`<div class="acct-email">✉️ ${esc(a.emailHint)}</div>`:""}</div>`; }).join("") : `<div class="empty">ابھی کوئی اکاؤنٹ نہیں۔</div>`;
+  document.getElementById("logList").innerHTML = state.logs.length? state.logs.slice(0,60).map(l=>`<div class="log-item"><time dir="ltr">${esc(fmtDate(l.ts))}</time><div>${esc(l.text)}</div></div>`).join("") : `<p class="note">ابھی کوئی سرگرمی نہیں۔</p>`;
+  document.getElementById("notifyState").textContent = state.settings.notify? "آن":"بند";
+  if(typeof renderGoogle==="function") renderGoogle();
+  renderSnapshots();
+}
+
+/* ---------- Views / Modal ---------- */
+function showView(name, btn){
+  document.querySelectorAll(".view").forEach(v=>v.classList.remove("on"));
+  document.getElementById("view-"+name).classList.add("on");
+  document.querySelectorAll("nav.bottom button[data-view]").forEach(b=>b.classList.toggle("on", b.dataset.view===name));
+  window.scrollTo({top:0, behavior:"smooth"});
+}
+function openModal(html){ document.getElementById("modalBox").innerHTML=html; document.getElementById("modalBg").classList.add("on"); }
+function closeModal(){ document.getElementById("modalBg").classList.remove("on"); }
+document.getElementById("modalBg").addEventListener("click", e=>{ if(e.target.id==="modalBg") closeModal(); });
+document.getElementById("searchInput").addEventListener("input", render);
+</script>
+<script>
+/* ---------- Accounts ---------- */
+function openAccountModal(id){
+  editingAccountId = id||null;
+  const a = id? state.accounts.find(x=>x.id===id) : null;
+  pickedColor = a? a.color : COLORS[state.accounts.length % COLORS.length];
+  openModal(`<h3>${a?"اکاؤنٹ میں ترمیم":"نیا Claude اکاؤنٹ"}</h3><div class="sub">صرف نام اور پہچان کے لیے ای میل کا اشارہ — پاس ورڈ نہیں۔</div>
+    <label>اکاؤنٹ کا نام *</label><input id="accName" placeholder="مثلاً Claude-1 (ذاتی)" value="${esc(a?a.name:"")}">
+    <label>ای میل / اشارہ (اختیاری)</label><input id="accEmail" dir="ltr" placeholder="example@gmail.com" value="${esc(a?a.emailHint:"")}">
+    <label>رنگ</label><div class="color-row">${COLORS.map(c=>`<div class="color-dot ${c===pickedColor?"sel":""}" style="background:${c}" onclick="pickColor('${c}',this)"></div>`).join("")}</div>
+    <div class="actions" style="margin-top:20px"><button class="btn primary" onclick="saveAccount()">💾 محفوظ کرو</button><button class="btn" onclick="closeModal()">منسوخ</button></div>`);
+}
+function pickColor(c, el){ pickedColor=c; document.querySelectorAll(".color-dot").forEach(d=>d.classList.remove("sel")); el.classList.add("sel"); }
+function saveAccount(){
+  const name=document.getElementById("accName").value.trim(); if(!name){ toast("نام لازمی ہے"); return; }
+  const email=document.getElementById("accEmail").value.trim();
+  if(editingAccountId){ const a=state.accounts.find(x=>x.id===editingAccountId); a.name=name; a.emailHint=email; a.color=pickedColor; log("اکاؤنٹ اپڈیٹ ہوا: "+name); }
+  else{ const a={id:uid(), name, emailHint:email, color:pickedColor, createdAt:now()}; state.accounts.push(a); log("نیا اکاؤنٹ شامل ہوا: "+name); }
+  save(); closeModal(); render(); toast("اکاؤنٹ محفوظ ہو گیا ✅");
+}
+function deleteAccount(id){
+  const a=state.accounts.find(x=>x.id===id); if(!a) return;
+  const n=state.projects.filter(p=>p.accountId===id).length;
+  if(!confirm(`اکاؤنٹ "${a.name}" حذف کروں؟ اس کے ${n} پروجیکٹ بھی حذف ہو جائیں گے۔`)) return;
+  state.accounts=state.accounts.filter(x=>x.id!==id); state.projects=state.projects.filter(p=>p.accountId!==id);
+  log("اکاؤنٹ حذف ہوا: "+a.name); save(); render(); toast("حذف ہو گیا");
+}
+
+/* ---------- Projects ---------- */
+function openProjectModal(id){
+  if(state.accounts.length===0){ toast("پہلے ایک اکاؤنٹ شامل کرو"); showView("accounts"); openAccountModal(); return; }
+  editingProjectId = id||null;
+  const p = id? state.projects.find(x=>x.id===id) : null;
+  openModal(`<h3>${p?"پروجیکٹ میں ترمیم":"نیا پروجیکٹ"}</h3><div class="sub">ہر اکاؤنٹ پر ایک وقت میں ایک ایکٹو پروجیکٹ — نیا ایکٹو بناؤ گے تو پرانا خود رک جائے گا۔</div>
+    <label>کس اکاؤنٹ پر؟ *</label><select id="prAccount">${state.accounts.map(a=>`<option value="${a.id}" ${p&&p.accountId===a.id?"selected":""}>${esc(a.name)}</option>`).join("")}</select>
+    <label>پروجیکٹ کا نام *</label><input id="prTitle" placeholder="مثلاً HazriGuard Attendance App" value="${esc(p?p.title:"")}">
+    <label>Claude چیٹ / پروجیکٹ کا لنک (اختیاری)</label><input id="prLink" dir="ltr" placeholder="https://claude.ai/..." value="${esc(p?p.link:"")}">
+    <label>موجودہ مرحلہ (Phase)</label><input id="prPhase" placeholder="مثلاً Backend مکمل، اب موبائل ایپ" value="${esc(p?p.phase:"")}">
+    <label>پروگریس % (0–100)</label><input id="prProgress" type="number" min="0" max="100" value="${p?p.progress||0:0}">
+    <label>اگلا Continue Prompt (پہلے سے تیار رکھو)</label><textarea id="prPrompt" rows="3" placeholder="مثلاً: Continue from where you stopped. Next: build the login screen…">${esc(p?p.nextPrompt:"")}</textarea>
+    <label>نوٹس (اختیاری)</label><textarea id="prNotes" rows="2" placeholder="کوئی خاص بات، آخری غلطی، رہ جانے والا کام…">${esc(p?p.notes:"")}</textarea>
+    <div class="actions" style="margin-top:18px"><button class="btn primary" onclick="saveProject()">💾 محفوظ کرو</button><button class="btn" onclick="closeModal()">منسوخ</button></div>`);
+}
+function saveProject(){
+  const title=document.getElementById("prTitle").value.trim(); if(!title){ toast("پروجیکٹ کا نام لازمی ہے"); return; }
+  const data={ accountId:document.getElementById("prAccount").value, title,
+    link:document.getElementById("prLink").value.trim(), phase:document.getElementById("prPhase").value.trim(),
+    progress:Math.min(100,Math.max(0,parseInt(document.getElementById("prProgress").value)||0)),
+    nextPrompt:document.getElementById("prPrompt").value, notes:document.getElementById("prNotes").value, updatedAt:now() };
+  if(editingProjectId){ const p=state.projects.find(x=>x.id===editingProjectId); Object.assign(p,data); log("پروجیکٹ اپڈیٹ ہوا: "+title, p.id); }
+  else{
+    const clash=state.projects.find(x=>x.accountId===data.accountId && ["active","waiting"].includes(x.status) && x.status!=="done");
+    if(clash){ if(!confirm(`اس اکاؤنٹ پر پہلے سے "${clash.title}" چل رہا ہے۔ اسے روک کر نیا شروع کروں؟`)) return; clash.status="paused"; clash.updatedAt=now(); log("پروجیکٹ رکا (نئے کی وجہ سے): "+clash.title, clash.id); }
+    const p={id:uid(), status:"active", quotaExhaustedAt:null, resetAt:null, notified:false, createdAt:now(), ...data};
+    state.projects.push(p); log("نیا پروجیکٹ شروع ہوا: "+title, p.id);
+  }
+  save(); closeModal(); render(); toast("پروجیکٹ محفوظ ہو گیا ✅"); showView("dash");
+}
+function deleteProject(id){
+  const p=state.projects.find(x=>x.id===id); if(!p) return;
+  if(!confirm(`پروجیکٹ "${p.title}" حذف کروں؟`)) return;
+  state.projects=state.projects.filter(x=>x.id!==id); log("پروجیکٹ حذف ہوا: "+p.title); save(); render();
+}
+function togglePause(id){
+  const p=state.projects.find(x=>x.id===id); if(!p) return;
+  if(p.status==="paused"){ p.status="active"; log("پروجیکٹ دوبارہ شروع: "+p.title, id); }
+  else { p.status="paused"; log("پروجیکٹ روکا گیا: "+p.title, id); }
+  p.updatedAt=now(); save(); render();
+}
+function markDone(id){
+  const p=state.projects.find(x=>x.id===id); if(!p) return;
+  p.status="done"; p.progress=100; p.resetAt=null; p.updatedAt=now();
+  log("🎉 پروجیکٹ مکمل ہوا: "+p.title, id); save(); render(); toast("مبارک ہو! پروجیکٹ مکمل 🎉");
+}
+function markContinued(id){
+  const p=state.projects.find(x=>x.id===id); if(!p) return;
+  p.status="active"; p.resetAt=null; p.notified=false; p.updatedAt=now();
+  log("▶️ Continue کیا گیا: "+p.title, id); save(); render(); toast("شروع کر دیا گیا — اب Claude پر کام کرو 🚀"); showView("dash");
+}
+function copyPrompt(id){
+  const p=state.projects.find(x=>x.id===id); if(!p||!p.nextPrompt) return;
+  const done=()=>toast("Continue Prompt کاپی ہو گیا 📋 — Claude میں پیسٹ کر دو");
+  if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(p.nextPrompt).then(done).catch(()=>fallbackCopy(p.nextPrompt, done)); }
+  else fallbackCopy(p.nextPrompt, done);
+}
+function fallbackCopy(text, done){ const ta=document.createElement("textarea"); ta.value=text; document.body.appendChild(ta); ta.select(); try{document.execCommand("copy");}catch(e){} ta.remove(); done(); }
+
+/* ---------- Quota flow ---------- */
+function openQuotaModal(id){
+  quotaProjectId=id; quotaChoice=null;
+  const p=state.projects.find(x=>x.id===id);
+  openModal(`<h3>⛔ کوٹا ختم — ${esc(p?p.title:"")}</h3><div class="sub">Claude نے ری سیٹ کا جو وقت بتایا ہے وہ منتخب کرو، یا نیچے درست وقت خود لگاؤ۔ اس کے بعد ٹول کاؤنٹ ڈاؤن چلائے گا اور وقت پورا ہوتے ہی پروجیکٹ Ready ہو جائے گا۔</div>
+    <label>فوری انتخاب</label><div class="chips">
+      <button class="chip" onclick="pickQuota(this, 5*60)">5 گھنٹے بعد</button>
+      <button class="chip" onclick="pickQuota(this, 12*60)">12 گھنٹے بعد</button>
+      <button class="chip" onclick="pickQuota(this, 24*60)">کل اسی وقت</button>
+      <button class="chip" onclick="pickQuotaTomorrow(this)">کل صبح 9 بجے</button>
+    </div>
+    <label>یا درست ری سیٹ وقت</label><input id="quotaCustom" type="datetime-local" dir="ltr">
+    <label>اس سیشن میں پروگریس % اب</label><input id="quotaProgress" type="number" min="0" max="100" value="${p?p.progress||0:0}">
+    <label>اگلا Continue Prompt ابھی سے تیار کر دو</label><textarea id="quotaPrompt" rows="3" placeholder="ری سیٹ ہوتے ہی یہی پیغام بھیجنا ہے…">${esc(p?p.nextPrompt||"":"")}</textarea>
+    <div class="actions" style="margin-top:18px"><button class="btn amber" onclick="saveQuota()">⏳ انتظار شروع کرو</button><button class="btn" onclick="closeModal()">منسوخ</button></div>`);
+}
+function pickQuota(el, mins){ quotaChoice=now()+mins*60000; document.querySelectorAll(".chip").forEach(c=>c.classList.remove("sel")); el.classList.add("sel"); document.getElementById("quotaCustom").value=""; }
+function pickQuotaTomorrow(el){ const d=new Date(); d.setDate(d.getDate()+1); d.setHours(9,0,0,0); quotaChoice=d.getTime(); document.querySelectorAll(".chip").forEach(c=>c.classList.remove("sel")); el.classList.add("sel"); document.getElementById("quotaCustom").value=""; }
+function saveQuota(){
+  const p=state.projects.find(x=>x.id===quotaProjectId); if(!p) return;
+  const custom=document.getElementById("quotaCustom").value;
+  const resetAt = custom? new Date(custom).getTime() : quotaChoice;
+  if(!resetAt || isNaN(resetAt)){ toast("پہلے ری سیٹ کا وقت منتخب کرو"); return; }
+  if(resetAt<=now()){ toast("ری سیٹ وقت مستقبل کا ہونا چاہیے"); return; }
+  p.status="waiting"; p.resetAt=resetAt; p.quotaExhaustedAt=now(); p.notified=false;
+  p.progress=Math.min(100,Math.max(0,parseInt(document.getElementById("quotaProgress").value)||p.progress||0));
+  const np=document.getElementById("quotaPrompt").value; if(np.trim()) p.nextPrompt=np;
+  p.updatedAt=now();
+  log("⛔ کوٹا ختم: "+p.title+" — ری سیٹ: "+fmtDate(resetAt), p.id);
+  save(); closeModal(); render(); showView("dash");
+  toast("کاؤنٹ ڈاؤن شروع ⏳ — 📅 بٹن سے فون الارم بھی لگا لو");
+}
+
+/* ---------- Calendar (.ics) reminder ---------- */
+function downloadICS(id){
+  const p=state.projects.find(x=>x.id===id); if(!p||!p.resetAt) return;
+  const a=accountOf(p);
+  const dt=new Date(p.resetAt).toISOString().replace(/[-:]/g,"").split(".")[0]+"Z";
+  const stamp=new Date().toISOString().replace(/[-:]/g,"").split(".")[0]+"Z";
+  const ics=["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//ClaudeQuotaManager//UR","BEGIN:VEVENT",
+    "UID:"+p.id+"@cqm","DTSTAMP:"+stamp,"DTSTART:"+dt,"DURATION:PT15M",
+    "SUMMARY:Claude کوٹا ری سیٹ — "+p.title,
+    "DESCRIPTION:اکاؤنٹ: "+(a?a.name:"")+"\\nاب Claude کھول کر Continue کرو۔",
+    "BEGIN:VALARM","TRIGGER:PT0M","ACTION:DISPLAY","DESCRIPTION:Claude quota reset","END:VALARM",
+    "END:VEVENT","END:VCALENDAR"].join("\r\n");
+  const url=URL.createObjectURL(new Blob([ics],{type:"text/calendar"}));
+  const aEl=document.createElement("a"); aEl.href=url; aEl.download="claude-reset-reminder.ics"; aEl.click();
+  setTimeout(()=>URL.revokeObjectURL(url),4000);
+  toast("کیلنڈر فائل بن گئی 📅 — اسے کھول کر Save کرو، فون الارم لگ جائے گا");
+}
+
+/* ---------- Export / Import ---------- */
+function exportData(){
+  const url=URL.createObjectURL(new Blob([JSON.stringify(state,null,2)],{type:"application/json"}));
+  const a=document.createElement("a"); a.href=url; a.download="ClaudeManagerData.json"; a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),4000); toast("ڈیٹا فائل ڈاؤن لوڈ ہو گئی ⬇️");
+}
+document.getElementById("importFile").addEventListener("change", e=>{
+  const f=e.target.files[0]; if(!f) return;
+  f.text().then(t=>{ try{ const parsed=JSON.parse(t);
+    if(!parsed || !Array.isArray(parsed.accounts) || !Array.isArray(parsed.projects)) throw 0;
+    makeSnapshot("Import سے پہلے آٹو بیک اپ"); state=parsed; if(!state.settings) state.settings={notify:true}; if(!state.logs) state.logs=[];
+    save(); render(); toast("Import مکمل ✅ — سارا ڈیٹا آ گیا");
+  }catch(err){ toast("یہ فائل درست نہیں لگی"); } });
+  e.target.value="";
+});
+
+/* ---------- Bulk add + device detection info ---------- */
+function openDeviceInfoModal(){
+  openModal(`<h3>📱 خودکار ڈیٹیکشن کیوں ممکن نہیں؟</h3>
+  <div class="sub" style="line-height:2">۱) جو HTML فائل فون میں کھلتی ہے، وہ براؤزر کے اندر ایک محفوظ خانے (sandbox) میں چلتی ہے۔<br>۲) Android کسی ایپ یا ویب پیج کو فون کے Google اکاؤنٹس کی فہرست نہیں دیتا — یہ تمہاری حفاظت کے لیے ہے۔<br>۳) Google کا آفیشل اکاؤنٹ چننے والا سسٹم بھی صرف ایک وقت میں <b>ایک</b> اکاؤنٹ تمہاری مرضی سے دیتا ہے، سارے خود نہیں، اور وہ بھی مقامی (file://) فائل پر نہیں چلتا — اس کے لیے آن لائن hosted ورژن چاہیے، جو Google Sync والے V1.1 میں آئے گا۔<br><br>اس لیے فی الحال تیز ترین راستہ: نیچے والے طریقے سے ساری Gmail آئی ڈیز ایک ساتھ شامل کر لو — 10 اکاؤنٹ بھی 30 سیکنڈ میں بن جائیں گے۔</div>
+  <div class="actions" style="margin-top:14px"><button class="btn primary" onclick="openBulkAddModal()">⚡ ایک ساتھ شامل کرو</button><button class="btn" onclick="closeModal()">بند کرو</button></div>`);
+}
+function openBulkAddModal(){
+  openModal(`<h3>⚡ سارے اکاؤنٹس ایک ساتھ شامل کرو</h3>
+  <div class="sub">ہر لائن میں ایک اکاؤنٹ لکھو۔ تین طریقے چلیں گے:<br><span dir="ltr">name@gmail.com</span><br><span dir="ltr">Claude-1 | name@gmail.com</span> (نام الگ دینا ہو تو)<br>جو ای میل پہلے سے موجود ہوگی وہ دوبارہ نہیں بنے گی۔</div>
+  <label>Gmail آئی ڈیز (ہر لائن میں ایک)</label>
+  <textarea id="bulkText" rows="7" dir="ltr" placeholder="first@gmail.com&#10;second@gmail.com&#10;Claude-3 | third@gmail.com"></textarea>
+  <div class="actions" style="margin-top:16px"><button class="btn primary" onclick="saveBulkAccounts()">⚡ سب شامل کرو</button><button class="btn" onclick="closeModal()">منسوخ</button></div>`);
+}
+function saveBulkAccounts(){
+  const raw=document.getElementById("bulkText").value||"";
+  const lines=raw.split(/\n/).map(s=>s.trim()).filter(Boolean);
+  if(!lines.length){ toast("پہلے کم از کم ایک ای میل لکھو"); return; }
+  let added=0, skipped=0;
+  const existing=new Set(state.accounts.map(a=>(a.emailHint||"").toLowerCase()));
+  lines.forEach((line,i)=>{
+    let name="", email="";
+    if(line.includes("|")){ const parts=line.split("|"); name=parts[0].trim(); email=(parts[1]||"").trim(); }
+    else if(line.includes(",")){ const parts=line.split(","); name=parts[0].trim(); email=(parts[1]||"").trim(); if(!email.includes("@")){ email=name; name=""; } }
+    else { email=line; }
+    email=email.trim();
+    if(!email || !email.includes("@")){ skipped++; return; }
+    if(existing.has(email.toLowerCase())){ skipped++; return; }
+    existing.add(email.toLowerCase());
+    if(!name) name="Claude-" + (state.accounts.length+1);
+    state.accounts.push({id:uid(), name, emailHint:email, color:COLORS[state.accounts.length%COLORS.length], createdAt:now()});
+    added++;
+  });
+  if(added) log("⚡ ایک ساتھ "+added+" اکاؤنٹ شامل ہوئے");
+  save(); closeModal(); render(); showView("accounts");
+  toast(added? ("✅ "+added+" اکاؤنٹ شامل ہو گئے"+(skipped? "، "+skipped+" چھوڑے گئے (دہرائے/غلط)":"")) : "کوئی نیا اکاؤنٹ نہیں بنا — سب پہلے سے موجود یا غلط تھے");
+}
+
+/* ---------- Google Sign-In + Drive Sync (سرکاری طریقہ) ----------
+   بہاؤ: Sign in with Google → اکاؤنٹ چنو → Continue/اجازت → ٹوکن
+   ڈیٹا اسی Google اکاؤنٹ کی Drive کے خفیہ appData فولڈر میں رہتا ہے۔
+   شرط: یہ فائل HTTPS لنک سے کھلے (یا localhost) اور Client ID سیٹ ہو۔ */
+const GOOGLE_CLIENT_ID_DEFAULT = "904657674162-i2np6er3gqkj16lg3hndg69mosqe5q2d.apps.googleusercontent.com";
+let gToken = null, gUser = null, gFileId = null, gTokenClient = null, gBusy = false;
+
+function effectiveClientId(){ return ((state.settings && state.settings.googleClientId) || GOOGLE_CLIENT_ID_DEFAULT || "").trim(); }
+function isLocalFileOrigin(){ return location.protocol === "file:" || location.protocol === "content:"; }
+function setSyncStatus(txt){ state.settings.lastSyncStatus = txt; const el = document.getElementById("googleSyncStatus"); if(el) el.textContent = txt; try{ saveLocal(); }catch(e){} }
+
+function initGoogle(){
+  if(!window.google || !google.accounts || !google.accounts.oauth2) return false;
+  const cid = effectiveClientId(); if(!cid) return false;
+  gTokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: cid,
+    scope: "openid email profile https://www.googleapis.com/auth/drive.appdata",
+    callback: onGoogleToken
+  });
+  return true;
+}
+function googleSignIn(){
+  if(isLocalFileOrigin()){
+    openModal('<h3>⚠️ یہ بٹن یہاں نہیں چلے گا</h3><div class="sub" style="line-height:2">یہ فائل تم نے فون کی ڈاؤن لوڈ فولڈر سے کھولی ہے (<span dir="ltr">file/content</span>)۔ Google اپنے Sign-In بٹن کو صرف <b>HTTPS لنک</b> سے کھلنے والے پیج پر اجازت دیتا ہے — یہ Google کی پابندی ہے، اس فائل کی نہیں۔<br>حل: اسی فائل کو اس کے آن لائن لنک سے کھولو (سیٹ اپ میں یہی ایک بار کا کام ہے)۔ وہاں بٹن بالکل ویسے چلے گا جیسا تم چاہتے ہو: اکاؤنٹ چنو → Continue → سب خود۔</div><div class="actions" style="margin-top:14px"><button class="btn primary" onclick="closeModal()">سمجھ گیا</button></div>');
+    return;
+  }
+  if(!effectiveClientId()){ openClientIdModal(); return; }
+  if(!window.google){ toast("Google کی لائبریری لوڈ ہو رہی ہے — انٹرنیٹ آن کر کے چند سیکنڈ بعد دوبارہ دباؤ"); return; }
+  if(!gTokenClient && !initGoogle()){ toast("Client ID درست نہیں لگتا"); return; }
+  gTokenClient.requestAccessToken({prompt: gToken ? "" : "consent"});
+}
+async function onGoogleToken(resp){
+  if(!resp || resp.error){ toast("Sign-In مکمل نہیں ہوا"); return; }
+  gToken = resp.access_token;
+  try{
+    const r = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {headers: {Authorization: "Bearer " + gToken}});
+    gUser = await r.json();
+    state.settings.googleAccountEmail = gUser.email || ""; state.settings.googleAccountName = gUser.name || "";
+    saveLocal();
+  }catch(e){ gUser = {email: state.settings.googleAccountEmail || "", name: state.settings.googleAccountName || ""}; }
+  renderGoogle();
+  toast("منسلک ہو گیا ✅ " + (gUser && gUser.email ? gUser.email : ""));
+  syncOnSignIn();
+}
+function googleSignOut(){
+  if(gToken && window.google && google.accounts.oauth2){ try{ google.accounts.oauth2.revoke(gToken, ()=>{}); }catch(e){} }
+  gToken = null; gUser = null; gFileId = null; renderGoogle(); setSyncStatus("سائن آؤٹ ہو گیا");
+  toast("Google سے سائن آؤٹ ہو گیا");
+}
+async function driveFetch(url, opts){
+  opts = opts || {}; opts.headers = Object.assign({}, opts.headers || {}, {Authorization: "Bearer " + gToken});
+  const r = await fetch(url, opts);
+  if(r.status === 401){ gToken = null; renderGoogle(); throw new Error("token-expired"); }
+  return r;
+}
+async function findCloudFile(){
+  const q = encodeURIComponent("name='ClaudeManagerData.json' and trashed=false");
+  const r = await driveFetch("https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=" + q + "&fields=files(id,name,modifiedTime)");
+  const j = await r.json();
+  return (j.files && j.files[0]) ? j.files[0] : null;
+}
+async function readCloudData(){
+  const f = await findCloudFile(); if(!f) return null; gFileId = f.id;
+  const r = await driveFetch("https://www.googleapis.com/drive/v3/files/" + f.id + "?alt=media");
+  return await r.json();
+}
+async function googleUploadCloud(silent){
+  if(!gToken){ if(!silent) googleSignIn(); return; }
+  if(gBusy) return; gBusy = true;
+  try{
+    const body = JSON.stringify(state);
+    if(!gFileId){ const f = await findCloudFile(); if(f) gFileId = f.id; }
+    if(gFileId){
+      await driveFetch("https://www.googleapis.com/upload/drive/v3/files/" + gFileId + "?uploadType=media", {method: "PATCH", headers: {"Content-Type": "application/json"}, body});
+    } else {
+      const boundary = "cqm_" + Date.now().toString(36);
+      const meta = JSON.stringify({name: "ClaudeManagerData.json", parents: ["appDataFolder"]});
+      const multipart = "--" + boundary + "\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n" + meta + "\r\n--" + boundary + "\r\nContent-Type: application/json\r\n\r\n" + body + "\r\n--" + boundary + "--";
+      const r = await driveFetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id", {method: "POST", headers: {"Content-Type": "multipart/related; boundary=" + boundary}, body: multipart});
+      const j = await r.json(); gFileId = j.id || null;
+    }
+    state.settings.lastSyncAt = now(); setSyncStatus("✅ آخری Sync: " + fmtDate(state.settings.lastSyncAt));
+    if(!silent) toast("Google Drive میں محفوظ ہو گیا ✅");
+  }catch(e){
+    if(e.message === "token-expired"){ if(!silent) toast("لاگ اِن ختم ہو گیا تھا — دوبارہ Sign in دباؤ"); }
+    else if(!silent){ setSyncStatus("❌ Sync ناکام — انٹرنیٹ چیک کرو"); toast("Sync ناکام"); }
+  }
+  gBusy = false;
+}
+async function syncOnSignIn(){
+  if(!gToken) return;
+  setSyncStatus("Google سے ڈیٹا ملایا جا رہا ہے…");
+  try{
+    const cloud = await readCloudData();
+    if(!cloud){ await googleUploadCloud(true); setSyncStatus("✅ پہلی بار: موجودہ ڈیٹا Google میں محفوظ کر دیا"); return; }
+    if(cloud.updatedAt && cloud.updatedAt > state.updatedAt){
+      makeSnapshot("Google سے نیا ڈیٹا آنے سے پہلے");
+      const keepSettings = state.settings;
+      state = cloud;
+      state.settings = Object.assign({}, cloud.settings || {}, keepSettings, {googleClientId: keepSettings.googleClientId || ""});
+      save(); render(); setSyncStatus("✅ Google والا تازہ ڈیٹا لوڈ ہو گیا");
+      toast("Google سے تازہ ڈیٹا آ گیا ✅");
+    } else if(state.updatedAt > (cloud.updatedAt || 0)){
+      await googleUploadCloud(true); setSyncStatus("✅ مقامی تازہ ڈیٹا Google پر بھیج دیا");
+    } else { setSyncStatus("✅ ڈیٹا پہلے سے ہم آہنگ ہے"); }
+  }catch(e){ setSyncStatus("⚠️ ملاپ میں رکاوٹ — دوبارہ کوشش کرو"); }
+}
+async function googleLoad(){
+  if(!gToken){ googleSignIn(); return; }
+  try{
+    const cloud = await readCloudData();
+    if(!cloud){ toast("Google پر ابھی ڈیٹا نہیں — پہلے Sync کرو"); return; }
+    if(!confirm("Google والا ڈیٹا لوڈ کروں؟ اکاؤنٹس: " + (cloud.accounts||[]).length + "، پروجیکٹس: " + (cloud.projects||[]).length + "۔ موجودہ ڈیٹا پہلے بیک اپ ہو جائے گا۔")) return;
+    makeSnapshot("Google لوڈ سے پہلے");
+    const keepSettings = state.settings; state = cloud;
+    state.settings = Object.assign({}, cloud.settings || {}, keepSettings, {googleClientId: keepSettings.googleClientId || ""});
+    save(); render(); toast("Google سے ڈیٹا آ گیا ✅");
+  }catch(e){ toast("لوڈ ناکام — دوبارہ Sign in کر کے دیکھو"); }
+}
+function googleToggleAuto(){
+  state.settings.autoSync = state.settings.autoSync === false ? true : false;
+  saveLocal(); renderGoogle();
+  toast("آٹو Sync " + (state.settings.autoSync === false ? "بند" : "آن"));
+}
+let _gAutoT = null;
+function scheduleGoogleAutoSync(){
+  if(!gToken || state.settings.autoSync === false) return;
+  clearTimeout(_gAutoT); _gAutoT = setTimeout(()=>googleUploadCloud(true), 4000);
+}
+function renderGoogle(){
+  const box = document.getElementById("googleAccountBox"); if(!box) return;
+  const st = document.getElementById("googleSyncStatus");
+  if(st) st.textContent = state.settings.lastSyncStatus || (gToken ? "منسلک ہے" : "منسلک نہیں");
+  const autoEl = document.getElementById("googleAutoState"); if(autoEl) autoEl.textContent = state.settings.autoSync === false ? "بند" : "آن";
+  if(gToken && gUser){
+    box.innerHTML = '<div class="acct"><div class="avatar" style="background:var(--accent2)">' + esc((gUser.name || gUser.email || "G").trim().charAt(0).toUpperCase()) + '</div>' +
+      '<div class="info"><b>' + esc(gUser.name || "Google اکاؤنٹ") + '</b><span>ڈیٹا اسی اکاؤنٹ کی Drive میں محفوظ ہوتا ہے</span></div></div>' +
+      (gUser.email ? '<div class="acct-email">✉️ ' + esc(gUser.email) + '</div>' : '') +
+      '<div class="actions" style="margin-top:12px"><button class="btn green" onclick="googleUploadCloud(false)">☁️ ابھی Sync کرو</button>' +
+      '<button class="btn" onclick="googleLoad()">☁️⬇️ Google سے لوڈ کرو</button>' +
+      '<button class="btn amber" onclick="googleToggleAuto()">🔄 آٹو Sync: <span id="googleAutoState">' + (state.settings.autoSync === false ? "بند" : "آن") + '</span></button>' +
+      '<button class="btn danger" onclick="googleSignOut()">سائن آؤٹ</button></div>';
+  } else {
+    box.innerHTML = '<button class="btn primary" style="width:100%; justify-content:center; padding:15px; font-size:15.5px" onclick="googleSignIn()">🔵 Sign in with Google</button>' +
+      '<p class="note" style="margin-top:10px">ایک کلک → اپنا Google اکاؤنٹ چنو → Continue۔ پھر سارا ڈیٹا اسی اکاؤنٹ کی Drive میں خود محفوظ ہوتا رہے گا — نہ کوڈ، نہ لمبا لنک، نہ Apps Script۔' +
+      (effectiveClientId() ? '' : '<br><b style="color:var(--amber)">نوٹ:</b> پہلی بار کے لیے اس پیج کی Client ID سیٹ ہونا باقی ہے — نیچے والا بٹن۔ یہ ایک بار کا کام ہے جو یا تم کر سکتے ہو یا میں تمہارے لیے کر دوں۔') + '</p>' +
+      '<div class="actions"><button class="btn" onclick="openClientIdModal()">🔑 Client ID لگاؤ / بدلو</button>' +
+      '<button class="btn" onclick="openGoogleSetupGuide()">❓ یہ ID کیا ہے؟</button></div>';
+  }
+}
+function openClientIdModal(){
+  openModal('<h3>🔑 Google Client ID</h3><div class="sub" style="line-height:2">یہ اس پیج کی پہچان ہے جو Google کو بتاتی ہے کہ Sign-In مانگنے والا یہی ٹول ہے۔ یہ پاس ورڈ نہیں ہوتا — پیج کے کوڈ میں بھی کھلا لکھا جاتا ہے۔<br>اگر میں نے تمہارے لیے بنا دی ہو تو وہ خود لگی ہوگی؛ خود بنائی ہو تو یہاں لگا دو۔</div>' +
+  '<label>Client ID</label><input id="clientIdInput" dir="ltr" placeholder="xxxxx.apps.googleusercontent.com" value="' + esc(effectiveClientId()) + '">' +
+  '<div class="actions" style="margin-top:16px"><button class="btn primary" onclick="saveClientId()">💾 محفوظ کرو</button><button class="btn" onclick="closeModal()">منسوخ</button></div>');
+}
+function saveClientId(){
+  const v = document.getElementById("clientIdInput").value.trim();
+  if(v && !/\.apps\.googleusercontent\.com$/.test(v)){ toast("یہ Client ID نہیں لگتی — آخر میں .apps.googleusercontent.com ہونا چاہیے"); return; }
+  state.settings.googleClientId = v; gTokenClient = null; saveLocal(); closeModal(); renderGoogle();
+  toast(v ? "Client ID لگ گئی ✅ — اب Sign in with Google دباؤ" : "Client ID ہٹا دی گئی");
+}
+function openGoogleSetupGuide(){
+  openModal('<h3>❓ ایک بار کا سیٹ اپ — بس 2 چیزیں</h3><div class="sub" style="line-height:2.05">Sign in with Google ہر ایپ میں اس لیے سیدھا چلتا ہے کہ اس ایپ کے مالک نے پہلے سے یہ 2 کام کیے ہوتے ہیں:<br>' +
+  '۱) <b>Client ID بنانا</b> — Google Cloud Console میں مفت، تقریباً 5 منٹ: نیا پروجیکٹ → Google Auth Platform → Clients → Web client → اس پیج کا لنک Authorized origin میں ڈالنا۔<br>' +
+  '۲) <b>اس فائل کا HTTPS لنک</b> — یہ فائل کسی مفت جگہ (مثلاً GitHub Pages) پر ہو تاکہ لنک سے کھلے؛ ڈاؤن لوڈ فولڈر والی فائل پر Google Sign-In نہیں دیتا۔<br><br>' +
+  'یہ دونوں کام ایک ہی بار ہوتے ہیں۔ اس کے بعد تمہارے لیے تجربہ بالکل وہی ہوگا جو تم کہہ رہے ہو: پیج کھولو → <b>Sign in with Google</b> → اکاؤنٹ چنو → <b>Continue</b> → ڈیٹا خود Google میں۔<br>' +
+  'یہ کام تم خود بھی کر سکتے ہو، میں قدم بقدم ساتھ دے دوں گا — یا تم کہو تو تمہارے اکاؤنٹ سے میں کر دوں، تم صرف Google کے اجازت والے بٹن خود دباؤ گے۔</div>' +
+  '<div class="actions" style="margin-top:14px"><button class="btn" onclick="closeModal()">بند کرو</button></div>');
+}
+
+/* ---------- Demo / Clear / Notify ---------- */
+function loadDemo(){
+  if(state.accounts.length && !confirm("ڈیمو ڈیٹا لوڈ کروں؟ موجودہ ڈیٹا بیک اپ ہو جائے گا۔")) return;
+  makeSnapshot("ڈیمو سے پہلے");
+  const a1={id:uid(),name:"Claude-1 (ذاتی)",emailHint:"demo1@gmail.com",color:COLORS[0],createdAt:now()};
+  const a2={id:uid(),name:"Claude-2 (کام)",emailHint:"demo2@gmail.com",color:COLORS[1],createdAt:now()};
+  const a3={id:uid(),name:"Claude-3",emailHint:"",color:COLORS[2],createdAt:now()};
+  state.accounts=[a1,a2,a3];
+  state.projects=[
+    {id:uid(),accountId:a1.id,title:"HazriGuard — Attendance App",link:"https://claude.ai",phase:"موبائل ایپ جاری",progress:65,status:"waiting",quotaExhaustedAt:now()-3600000,resetAt:now()-60000,notified:false,nextPrompt:"Continue from where you stopped. Next step: finish the login screen and test it.",notes:"",createdAt:now()-86400000*3,updatedAt:now()-3600000},
+    {id:uid(),accountId:a2.id,title:"Urdu PDF Extractor V3",link:"https://claude.ai",phase:"OCR ٹیسٹنگ",progress:40,status:"waiting",quotaExhaustedAt:now()-7200000,resetAt:now()+ (4*3600+22*60)*1000,notified:false,nextPrompt:"Continue. Run the benchmark on the new sample and share the report.",notes:"",createdAt:now()-86400000*2,updatedAt:now()-7200000},
+    {id:uid(),accountId:a3.id,title:"Inventory System — نئی دکان",link:"",phase:"ڈیٹا بیس ڈیزائن",progress:15,status:"active",quotaExhaustedAt:null,resetAt:null,notified:false,nextPrompt:"",notes:"",createdAt:now()-86400000,updatedAt:now()-1800000}
+  ];
+  state.logs=[]; log("🧪 ڈیمو ڈیٹا لوڈ ہوا — Design دیکھنے کے لیے ہے، اپنا ڈیٹا بعد میں شامل کرو");
+  save(); render(); showView("dash"); toast("ڈیمو لوڈ ہو گیا 🧪 — ایک پروجیکٹ READY نظر آئے گا");
+}
+function clearAll(){
+  if(!confirm("سارا ڈیٹا صاف کروں؟ پہلے خودکار بیک اپ بن جائے گا۔")) return;
+  makeSnapshot("صاف کرنے سے پہلے");
+  state={version:1, updatedAt:now(), accounts:[], projects:[], logs:[], settings:{notify:true}};
+  save(); render(); toast("سارا ڈیٹا صاف ہو گیا");
+}
+function toggleNotify(){
+  state.settings.notify=!state.settings.notify;
+  if(state.settings.notify && "Notification" in window) Notification.requestPermission();
+  save(); render(); toast("نوٹیفکیشن "+(state.settings.notify?"آن":"بند"));
+}
+
+/* ---------- Tick: countdown + ready notification ---------- */
+setInterval(()=>{
+  document.querySelectorAll("[data-countdown]").forEach(el=>{
+    const left=parseInt(el.dataset.countdown)-now();
+    el.childNodes[0].textContent = fmtCountdown(left);
+  });
+  let changed=false;
+  state.projects.forEach(p=>{
+    if(p.status==="waiting" && p.resetAt && p.resetAt<=now() && !p.notified){
+      p.notified=true; changed=true;
+      if(state.settings.notify && "Notification" in window && Notification.permission==="granted"){
+        new Notification("🟢 Claude کوٹا ری سیٹ ہو گیا", {body:p.title+" — ابھی Continue کرو"});
+      }
+    }
+  });
+  if(changed){ saveLocal(); render(); }
+},1000);
+
+/* ---------- Init ---------- */
+if(state.settings && state.settings.notify && "Notification" in window && Notification.permission==="default"){ /* اجازت بٹن سے لی جائے گی */ }
+if(!loadLocal()) saveLocal(); /* پہلی بار: seed ڈیٹا فوراً محفوظ کر دو تاکہ اگلی بار بھی رہے */
+render(); restoreFolder();
+window.addEventListener("load", ()=> setTimeout(()=>{ if(typeof initGoogle==="function") initGoogle(); }, 900));
+</script>
+</body>
+</html>
